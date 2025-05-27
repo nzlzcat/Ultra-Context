@@ -56,12 +56,18 @@ PROJECT_NAME = 'titans-mac-transformer'
 RUN_NAME = f'mac - {NUM_LONGTERM_MEM} longterm mems, layers {NEURAL_MEM_LAYERS}'
 WANDB_ONLINE = False # turn this on to pipe experiment to cloud
 
-# perf related
+# device & perf related
 
-USE_ACCELERATED_SCAN = True
-USE_FLEX_ATTN = True
-USE_FAST_INFERENCE = False
-
+if torch.cuda.is_available():
+    DEVICE = 'cuda'
+    USE_ACCELERATED_SCAN = True
+    USE_FLEX_ATTN = True
+    USE_FAST_INFERENCE = True
+else:
+    DEVICE = 'cpu'
+    USE_ACCELERATED_SCAN = False
+    USE_FLEX_ATTN = False
+    USE_FAST_INFERENCE = False
 # wandb experiment tracker
 
 import wandb
@@ -123,7 +129,7 @@ model = MemoryAsContextTransformer(
         use_accelerated_scan = USE_ACCELERATED_SCAN,
         per_parameter_lr_modulation = MEMORY_MODEL_PER_LAYER_LEARNED_LR
     )
-).cuda()
+).to(DEVICE)
 
 # prepare enwik8 data
 
@@ -141,7 +147,7 @@ class TextSamplerDataset(Dataset):
     def __getitem__(self, index):
         rand_start = torch.randint(0, self.data.size(0) - self.seq_len, (1,))
         full_seq = self.data[rand_start: rand_start + self.seq_len + 1].long()
-        return full_seq.cuda()
+        return full_seq.to(DEVICE)
 
     def __len__(self):
         return self.data.size(0) // self.seq_len
