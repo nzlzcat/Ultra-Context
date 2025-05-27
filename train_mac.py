@@ -159,7 +159,23 @@ val_loader    = cycle(DataLoader(val_dataset, batch_size = BATCH_SIZE))
 
 # optimizer
 
-optim = AdoptAtan2(model.parameters(), lr = LEARNING_RATE)
+def parametrize(model):
+    """Filter out duplicate parameters to avoid optimizer conflicts on CPU"""
+    if DEVICE == 'cuda':
+        return model.parameters()
+    seen = set()
+    unique_params = []
+    
+    for param in model.parameters():
+        if param.data_ptr() not in seen:
+            seen.add(param.data_ptr())
+            unique_params.append(param)
+    
+    print(f"Original parameters: {sum(1 for _ in model.parameters())}")
+    print(f"Unique parameters: {len(unique_params)}")
+    return unique_params
+
+optim = AdoptAtan2(parametrize(model), lr = LEARNING_RATE)
 
 # training
 
